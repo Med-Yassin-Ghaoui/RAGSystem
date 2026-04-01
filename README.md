@@ -67,7 +67,7 @@ Example markdown you can keep and replace later:
 ```markdown
 ![Upload screen](assets/demo-upload.png)
 ![Answer screen](assets/demo-answer.png)
-![End-to-end flow](assets/demo-flow.gif)
+![End-to-end flow](assets/demo-flow.png)
 ```
 
 ## Project Files
