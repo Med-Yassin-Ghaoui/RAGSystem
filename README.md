@@ -49,26 +49,15 @@ Streamlit UI
 	-> answer shown in UI
 ```
 
-## Demo
+## 📸 Demo
 
-Add product screenshots or a short GIF here so people can see the app before they clone it.
 
-Suggested repo structure for media:
 
-```text
-assets/
-	demo-upload.png
-	demo-answer.png
-	demo-flow.gif
-```
-
-Example markdown you can keep and replace later:
-
-```markdown
 ![Upload screen](assets/demo-upload.png)
-![Answer screen](assets/demo-answer.png)
 ![End-to-end flow](assets/demo-flow.png)
-```
+![Answer screen](assets/demo-answer.png)
+
+
 
 ## Project Files
 
