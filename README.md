@@ -1,145 +1,140 @@
-# 🔍 RAGSystem
+# RAGProductionApp
 
-A full-stack **Retrieval-Augmented Generation (RAG)** pipeline that lets you chat with your documents. Upload PDFs or text files, and get accurate, context-grounded answers powered by **Google Gemini**, with semantic search backed by **Qdrant** and async orchestration via **Inngest**.
+An event-driven Retrieval-Augmented Generation (RAG) app that lets you upload PDF files, index them into Qdrant, and ask grounded questions through a Streamlit UI.
 
----
+## What This Project Currently Does
 
-## ✨ Features
+- Ingests PDF files from the UI and stores them under `uploads/`
+- Splits extracted PDF text into chunks with overlap
+- Embeds chunks using `gemini-embedding-2-preview`
+- Stores vectors and payload text in a local Qdrant collection (`docs`)
+- Accepts a question, retrieves top-k relevant chunks, and generates an answer with Gemini
+- Uses Inngest events and functions to orchestrate ingestion and query workflows
 
-- 📄 **Document ingestion** — Upload PDFs and plain text files for processing
-- 🧩 **Chunking & embedding** — Documents are split and embedded for semantic retrieval
-- 🗄️ **Vector storage** — Embeddings are stored and queried via Qdrant
-- 🤖 **Gemini-powered generation** — Retrieved context is fed to Google Gemini for grounded answers
-- ⚙️ **Inngest orchestration** — Async, event-driven workflows for ingestion and indexing pipelines
-- 🖥️ **Streamlit UI** — Clean, interactive interface for uploading documents and asking questions
+## Why This Design
 
----
+- Streamlit for the interface:
+	Fast way to build and iterate on a document Q&A front end.
+- Inngest for orchestration:
+	Ingestion and query steps are modeled as event-driven workflows, which keeps the pipeline explicit and observable.
+- Qdrant for retrieval:
+	Vector search returns the most similar chunks needed for grounded generation.
+- Gemini embeddings + generation:
+	The same provider is used for both semantic representation and final response generation, which simplifies integration.
+- Text-chunk payloads in the vector store:
+	Retrieved text can be directly placed into the answer prompt, which keeps responses traceable to stored context.
 
-## 🏗️ Architecture
+## Current Limitations (Honest Scope)
 
+- Input type is PDF only right now (no image ingestion yet)
+- Qdrant URL is currently hardcoded to `http://localhost:6333` in `vector_db.py`
+- Environment variable used for Gemini is `GOOGLE_API`
+- No explicit retry policy is configured in code for Inngest functions yet
+
+## Architecture
+
+```text
+Streamlit UI
+	-> send Inngest event (ingest)
+	-> Inngest function loads PDF text
+	-> chunk text
+	-> embed chunks
+	-> upsert vectors + payload text in Qdrant
+
+Streamlit UI
+	-> send Inngest event (query)
+	-> embed question
+	-> Qdrant top-k retrieval
+	-> Gemini answer from retrieved context
+	-> answer shown in UI
 ```
-User (Streamlit UI)
-      │
-      ├─── Upload document ──► Inngest Workflow
-      │                              │
-      │                    Chunk ──► Embed ──► Qdrant (store vectors)
-      │
-      └─── Ask question ──► Embed query ──► Qdrant (retrieve top-k chunks)
-                                                    │
-                                           Gemini API (generate answer)
-                                                    │
-                                           Answer displayed in UI
+
+## Demo
+
+Add product screenshots or a short GIF here so people can see the app before they clone it.
+
+Suggested repo structure for media:
+
+```text
+assets/
+	demo-upload.png
+	demo-answer.png
+	demo-flow.gif
 ```
 
----
+Example markdown you can keep and replace later:
 
-## 🛠️ Tech Stack
+```markdown
+![Upload screen](assets/demo-upload.png)
+![Answer screen](assets/demo-answer.png)
+![End-to-end flow](assets/demo-flow.gif)
+```
 
-| Component        | Technology              |
-|------------------|-------------------------|
-| LLM              | Google Gemini API       |
-| Vector Database  | Qdrant                  |
-| Orchestration    | Inngest                 |
-| UI               | Streamlit               |
-| Language         | Python                  |
+## Project Files
 
----
+```text
+RAGProductionApp/
+	main.py             # FastAPI + Inngest workflow functions
+	Streamlit_app.py    # Upload and question-answer UI
+	data_loader.py      # PDF loading, chunking, embeddings
+	vector_db.py        # Qdrant collection, upsert, search
+	custom_types.py     # Pydantic models for workflow payloads
+	uploads/            # Uploaded PDFs
+	qdrant_storage/     # Local Qdrant data directory (if running local persistence)
+	pyproject.toml      # Project metadata and dependencies
+	requirements.txt    # Exported dependency lock-style list
+```
 
-## 🚀 Getting Started
+## Requirements
 
-### Prerequisites
+- Python 3.11+
+- Qdrant running locally on port 6333
+- Google Gemini API key
+- Inngest local dev server for local workflow execution
 
-- Python 3.9+
-- A running [Qdrant](https://qdrant.tech/documentation/quick-start/) instance (local or cloud)
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
-- An [Inngest](https://www.inngest.com/) account (or local dev server)
+## Setup
 
-### Installation
+1. Install dependencies:
 
 ```bash
-git clone https://github.com/Med-Yassin-Ghaoui/RAGSystem.git
-cd RAGSystem
 pip install -r requirements.txt
 ```
 
-### Configuration
-
-Create a `.env` file at the root of the project:
+2. Create a `.env` file in the project root:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_API=your_gemini_api_key
+INNGEST_API_BASE=http://127.0.0.1:8288/v1
 ```
 
-### Running the App
+3. Keep secrets safe:
 
-**1. Start the Inngest dev server** (for local orchestration):
+- Ensure `.env` stays in `.gitignore`
+- Never commit real API keys
+
+## Run Locally
+
+1. Start Inngest dev server:
+
 ```bash
 npx inngest-cli@latest dev
 ```
 
-**2. Launch the Streamlit app:**
+2. Start the FastAPI app (Inngest handler host):
+
 ```bash
-streamlit run app.py
+uvicorn main:app --reload
 ```
 
-Then open your browser at `http://localhost:8501`.
+3. Start the Streamlit app:
 
----
-
-## 📂 Project Structure
-
-```
-RAGSystem/
-├── app.py                  # Streamlit UI entrypoint
-├── ingestion/
-│   ├── chunker.py          # Document splitting logic
-│   ├── embedder.py         # Embedding generation
-│   └── inngest_functions.py# Inngest workflow definitions
-├── retrieval/
-│   ├── qdrant_client.py    # Qdrant vector store interface
-│   └── retriever.py        # Top-k similarity search
-├── generation/
-│   └── gemini.py           # Gemini API calls & prompt construction
-├── utils/
-│   └── file_parser.py      # PDF / text file parsing
-├── .env.example
-├── requirements.txt
-└── README.md
+```bash
+streamlit run Streamlit_app.py
 ```
 
-> ⚠️ Structure may vary — update this section to match your actual layout.
+## Notes For Future Improvements
 
----
-
-## 📸 Demo
-
-> _Add a screenshot or GIF of the Streamlit interface here._
-
----
-
-## 🔧 Roadmap
-
-- [ ] Multi-document session support
-- [ ] Metadata filtering in retrieval
-- [ ] Streaming responses from Gemini
-- [ ] Conversation memory / chat history
-- [ ] Docker Compose setup for one-command deployment
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
-
----
-
-## 👤 Author
-
-**Med Yassin Ghaoui**
-- GitHub: [@Med-Yassin-Ghaoui](https://github.com/Med-Yassin-Ghaoui)
+- Add image ingestion by introducing OCR in `data_loader.py`
+- Move Qdrant URL into environment variables
+- Add explicit Inngest retry configuration and document it
+- Add tests for ingestion and retrieval paths
